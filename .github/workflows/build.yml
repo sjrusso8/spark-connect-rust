@@ -29,54 +29,61 @@ on:
 jobs:
   format:
     runs-on: ubuntu-latest
+    env:
+      DEFAULT_FEATURES: "polars,datafusion"
+
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: "true"
+      - uses: actions/checkout@v6
 
       - name: install protoc
-        uses: arduino/setup-protoc@v2
+        uses: arduino/setup-protoc@v3
         with:
           version: 23.x
 
       - name: Install minimal stable with clippy and rustfmt
-        uses: dtolnay/rust-toolchain@stable
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
-          components: rustfmt
+          components: rustfmt,clippy
+          cache: true
 
-      - name: Format
-        run: cargo fmt -- --check
+      - name: Rustfmt Check
+        uses: actions-rust-lang/rustfmt@v1
+
+      - name: Build and Lint with Clippy
+        run: cargo clippy --profile=ci --features ${{ env.DEFAULT_FEATURES }} --tests
+      
+      - name: Run Machete to check for unused dependencies
+        uses: bnjbvr/cargo-machete@v0.9.1
 
   build:
     runs-on: ubuntu-latest
+    env:
+      DEFAULT_FEATURES: "polars,datafusion"
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: "true"
+      - uses: actions/checkout@v6
 
       - name: install protoc
-        uses: arduino/setup-protoc@v2
+        uses: arduino/setup-protoc@v3
         with:
           version: 23.x
 
-      - name: install minimal stable with clippy and rustfmt
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
           components: clippy
-
-      - uses: Swatinem/rust-cache@v2
-
+          cache: true
+     
       - name: build and lint with clippy
-        run: cargo clippy
+        run: cargo clippy --profile=ci --features ${{ env.DEFAULT_FEATURES }}
 
       - name: Check docs
-        run: cargo doc
+        run: cargo doc --profile=ci --features ${{ env.DEFAULT_FEATURES }}
 
       - name: Check no default features (except rustls)
-        run: cargo check
+        run: cargo check  --profile=ci --features ${{ env.DEFAULT_FEATURES }}
 
   integration_test:
     name: integration tests
@@ -89,26 +96,27 @@ jobs:
       # https://github.com/rust-lang/cargo/issues/10280
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
+      DEFAULT_FEATURES: "polars,datafusion"
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: "true"
+      - uses: actions/checkout@v5
 
       - name: install protoc
-        uses: arduino/setup-protoc@v2
+        uses: arduino/setup-protoc@v3
         with:
           version: 23.x
 
-      - name: install minimal stable with clippy and rustfmt
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
-
-      - uses: Swatinem/rust-cache@v2
-
+          cache: true
+          # if we ever get rid of all the clippy warnings, we can remove this line
+          rustflags: ""
+      
       - name: Start emulated services
         run: docker compose up -d
 
       - name: Run tests
-        run: cargo test -p spark-connect-rs --features polars,datafusion
+        run: cargo test -p spark-connect-rs --features ${{ env.DEFAULT_FEATURES }}
+

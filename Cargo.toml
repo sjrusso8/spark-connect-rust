@@ -60,3 +60,39 @@ chrono = { version = "0.4" }
 datafusion = { version = "47.0", default-features = false }
 polars = { version = "0.43", default-features = false }
 polars-arrow = { version = "0.43", default-features = false, features = ["arrow_rs"]  }
+
+
+
+# ============================================================================
+# Profile Configuration
+# ============================================================================
+# Profiles for different use cases:
+# - dev: Fast local development with good debug experience (Cargo defaults)
+# - test: test builds with minimal debug info to save disk/RAM (custom)
+# - bench: For benchmarking with flamegraphs (cargo bench)
+# - profiling: For performance profiling with release opts + debug info
+# - ci: CI/CD optimized - fast builds, release-like performance
+# ============================================================================
+
+# Test profile - reduced debug info to save disk/RAM
+# Usage: cargo test (automatic)
+[profile.test]
+debug = "line-tables-only"
+
+# Benchmark profile with debug symbols for flamegraphs
+# Usage: cargo bench (automatic)
+[profile.bench]
+debug = true
+
+# Profiling profile with release optimizations + debug info
+# Usage: cargo build --profile=profiling
+[profile.profiling]
+inherits = "release"
+debug = true
+
+# CI profile - optimized for Continuous Integration
+# Usage: cargo build --profile=ci
+[profile.ci]
+inherits = "dev"
+debug = false
+incremental = false
