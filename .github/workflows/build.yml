@@ -46,6 +46,7 @@ jobs:
           toolchain: stable
           components: rustfmt,clippy
           cache: true
+          # if we ever get rid of all the clippy warnings, we can remove this line
           rustflags: ""
 
       - name: Rustfmt Check
@@ -76,6 +77,7 @@ jobs:
           toolchain: stable
           components: clippy
           cache: true
+          # if we ever get rid of all the clippy warnings, we can remove this line
           rustflags: ""
      
       - name: build and lint with clippy

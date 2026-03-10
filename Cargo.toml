@@ -62,6 +62,8 @@ polars = { version = "0.43", default-features = false }
 polars-arrow = { version = "0.43", default-features = false, features = ["arrow_rs"]  }
 
 
+[workspace.metadata.cargo-machete]
+ignored = ["prost-types"]
 
 # ============================================================================
 # Profile Configuration
