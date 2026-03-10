@@ -46,6 +46,7 @@ jobs:
           toolchain: stable
           components: rustfmt,clippy
           cache: true
+          rustflags: ""
 
       - name: Rustfmt Check
         uses: actions-rust-lang/rustfmt@v1
@@ -75,6 +76,7 @@ jobs:
           toolchain: stable
           components: clippy
           cache: true
+          rustflags: ""
      
       - name: build and lint with clippy
         run: cargo clippy --profile=ci --features ${{ env.DEFAULT_FEATURES }}
