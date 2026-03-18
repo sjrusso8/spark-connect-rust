@@ -21,6 +21,8 @@
 //! require expressions in different forms. These traits are used to either translate a value into
 //! a [spark::Expression] or into a [spark::expression::Literal].
 
+use core::panic;
+
 use chrono::NaiveDateTime;
 
 use crate::spark;
@@ -245,6 +247,18 @@ where
 
         spark::expression::Literal {
             literal_type: Some(spark::expression::literal::LiteralType::Array(array_type)),
+        }
+    }
+}
+
+// TODO will need to be updated to handle all types as another options for flexibility
+impl From<DataType> for spark::expression::Literal {
+    fn from(value: DataType) -> Self {
+        match value {
+            DataType::Null => spark::expression::Literal {
+                literal_type: Some(spark::expression::literal::LiteralType::Null(value.into())),
+            },
+            _ => panic!("Use lit() to create a DataType other than NULL "),
         }
     }
 }

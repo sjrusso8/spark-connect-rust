@@ -146,8 +146,8 @@ gen_func!(spark_partition_id, [], "A column for partition ID.");
 #[allow(dead_code)]
 #[allow(unused_variables)]
 /// Evaluates a list of conditions and returns one of multiple possible result expressions.
-fn when(condition: impl Into<Column>, value: Column) -> Column {
-    unimplemented!("not implemented")
+fn when(condition: impl Into<Column>, value: impl Into<Column>) -> Column {
+    invoke_func("when", vec![condition.into(), value.into()])
 }
 
 /// Computes bitwise not.
@@ -2616,6 +2616,155 @@ mod tests {
         let res = select_func(df).await?;
         let expected_col: ArrayRef = Arc::new(Float64Array::from(vec![None]));
         let expected = record_batch_func(expected_col)?;
+        assert_eq!(expected, res);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_func_col_when() -> Result<(), SparkError> {
+        let spark = setup().await;
+
+        let name: ArrayRef = Arc::new(StringArray::from(vec!["Tom", "Alice", "Bob"]));
+        let age: ArrayRef = Arc::new(Int64Array::from(vec![14, 23, 16]));
+
+        let data = RecordBatch::try_from_iter(vec![("name", name), ("age", age)])?;
+
+        let df = spark.create_dataframe(&data)?;
+
+        let res = df
+            .with_column(
+                "cond",
+                when(col("name").eq(lit("Tom")), lit(1))
+                    .when(col("name").like(lit("Ali%")), lit(2))
+                    .otherwise(lit(3)),
+            )
+            .select(["cond"])
+            .collect()
+            .await?;
+
+        let cond: ArrayRef = Arc::new(Int32Array::from(vec![1, 2, 3]));
+
+        let expected = RecordBatch::try_from_iter(vec![("cond", cond)])?;
+
+        assert_eq!(expected, res);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic]
+    async fn test_func_col_when_panic() {
+        let spark = setup().await;
+
+        let name: ArrayRef = Arc::new(StringArray::from(vec!["Tom", "Alice", "Bob"]));
+        let age: ArrayRef = Arc::new(Int64Array::from(vec![14, 23, 16]));
+
+        let data = RecordBatch::try_from_iter(vec![("name", name), ("age", age)]).unwrap();
+
+        let df = spark.create_dataframe(&data).unwrap();
+
+        // should panic when `when` directly on a column used twice
+        let _ = df
+            .with_column(
+                "cond",
+                col("name")
+                    .when(col("name").eq(lit("Tom")), lit(1))
+                    .otherwise(lit(3)),
+            )
+            .select(["cond"])
+            .collect()
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    #[should_panic]
+    async fn test_func_col_when_otherwise_panic() {
+        let spark = setup().await;
+
+        let name: ArrayRef = Arc::new(StringArray::from(vec!["Tom", "Alice", "Bob"]));
+        let age: ArrayRef = Arc::new(Int64Array::from(vec![14, 23, 16]));
+
+        let data = RecordBatch::try_from_iter(vec![("name", name), ("age", age)]).unwrap();
+
+        let df = spark.create_dataframe(&data).unwrap();
+
+        // should panic when `otherwise` is used twice
+        let _ = df
+            .with_column(
+                "cond",
+                when(col("name").eq(lit("Tom")), lit(1))
+                    .when(col("name").like(lit("Ali%")), lit(2))
+                    .otherwise(lit(3))
+                    .otherwise(lit(4)),
+            )
+            .select(["cond"])
+            .collect()
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_func_col_between() -> Result<(), SparkError> {
+        let spark = setup().await;
+
+        let name: ArrayRef = Arc::new(StringArray::from(vec!["Tom", "Alice", "Bob"]));
+        let age: ArrayRef = Arc::new(Int64Array::from(vec![14, 23, 16]));
+
+        let data = RecordBatch::try_from_iter(vec![("name", name), ("age", age)])?;
+
+        let df = spark.create_dataframe(&data)?;
+
+        let res = df
+            .filter(col("age").between(lit(13), lit(16)))
+            .collect()
+            .await?;
+
+        let name: ArrayRef = Arc::new(StringArray::from(vec!["Tom", "Bob"]));
+        let age: ArrayRef = Arc::new(Int64Array::from(vec![14, 16]));
+
+        let expected = RecordBatch::try_from_iter(vec![("name", name), ("age", age)])?;
+
+        assert_eq!(expected, res);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_func_eq_null_safe() -> Result<(), SparkError> {
+        let spark = setup().await;
+
+        let schema = Schema::new(vec![Field::new("value", DataType::Int64, true)]);
+
+        let a: ArrayRef = Arc::new(Int64Array::from(vec![Some(1), None]));
+
+        let data = RecordBatch::try_new(Arc::new(schema), vec![a.clone()])?;
+
+        let df = spark.create_dataframe(&data)?;
+
+        let res = df
+            .select([
+                col("value").eq(lit(1)).alias("eq_value"),
+                col("value")
+                    .eq_null_safe(lit(1))
+                    .alias("eq_null_safe_value"),
+                col("value")
+                    .eq_null_safe(lit(crate::types::DataType::Null))
+                    .alias("eq_null_safe_null"),
+            ])
+            .collect()
+            .await?;
+
+        let expected = spark
+            .sql(
+                "
+            SELECT true as eq_value, true as eq_null_safe_value, false as eq_null_safe_null
+            UNION 
+            SELECT NULL, false, true",
+            )
+            .await?
+            .collect()
+            .await?;
+
         assert_eq!(expected, res);
 
         Ok(())

@@ -417,8 +417,8 @@ Spark [Column](https://spark.apache.org/docs/latest/api/python/reference/pyspark
 | asc              | ![done] |                                                                              |
 | asc_nulls_first  | ![done] |                                                                              |
 | asc_nulls_last   | ![done] |                                                                              |
-| astype           | ![open] |                                                                              |
-| between          | ![open] |                                                                              |
+| astype           | ![done] |                                                                           |
+| between          | ![done] |                                                                              |
 | cast             | ![done] |                                                                              |
 | contains         | ![done] |                                                                              |
 | desc             | ![done] |                                                                              |
@@ -426,7 +426,7 @@ Spark [Column](https://spark.apache.org/docs/latest/api/python/reference/pyspark
 | desc_nulls_last  | ![done] |                                                                              |
 | dropFields       | ![done] |                                                                              |
 | endswith         | ![done] |                                                                              |
-| eqNullSafe       | ![open] |                                                                              |
+| eqNullSafe       | ![done] |                                                                              |
 | getField         | ![open] | This is depreciated but will need to be implemented                          |
 | getItem          | ![open] | This is depreciated but will need to be implemented                          |
 | ilike            | ![done] |                                                                              |
@@ -451,6 +451,10 @@ Spark [Column](https://spark.apache.org/docs/latest/api/python/reference/pyspark
 | AND `&`          | ![done] |                                                                              |
 | XOR `^`          | ![done] |                                                                              |
 | Negate `~`       | ![done] |                                                                              |
+| greater than `>` `gt`       | ![done] |                                                                              |
+| greater than or equal `>=` `gt_eq`       | ![done] |           
+| less than `<` `lt`       | ![done] |                                                                              |
+| less than or equal `<=` `lt_eq`       | ![done] |                                                                              |
 
 ### Data Types
 
@@ -489,7 +493,7 @@ An array can be made like `lit([1_i16,2_i16,3_i16])` would result in an `ArrayTy
 
 | Spark Literal Type | Rust Type           | Status  |
 |--------------------|---------------------|---------|
-| Null               |                     | ![open] |
+| Null               | DataType::Null      | ![done] |
 | Binary             | `&[u8]`             | ![done] |
 | Boolean            | `bool`              | ![done] |
 | Byte               |                     | ![open] |
